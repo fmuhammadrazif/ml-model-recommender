@@ -1,0 +1,1165 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ML Model Recommender App</title>
+    <style>
+        /* Add this to the very top of your CSS */
+        html {
+            overflow-y: scroll; /* Always show vertical scrollbar to prevent horizontal layout shifts */
+        }
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            min-height: 100vh;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            /* Removed flex properties and padding here; .container will handle centering */
+            display: block; /* Ensure body behaves as a block for container centering */
+        }
+
+        .container {
+            background: white; /* White card */
+            border-radius: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.15); /* Adjusted shadow for white card */
+            padding: 20px; /* Reverted to a slightly more generous internal padding for content safety */
+            max-width: 950px; /* Adjusted max-width for overall fit */
+            width: 95%; /* Use percentage width to ensure it's always inside the viewport */
+            margin: 20px auto; /* NEW: Use margin auto for robust horizontal centering; added vertical margin */
+            text-align: center;
+            border: none;
+            color: black;
+            display: flex;
+            flex-direction: column;
+            min-height: 500px; /* Adjusted min-height slightly for better content fit */
+            justify-content: space-between;
+        }
+
+        .header {
+            margin-bottom: 10px; 
+        }
+
+        .header h1 {
+            color: #764ba2; /* Purple */
+            font-size: 2rem; 
+            margin-bottom: 0px; 
+        }
+
+        .header p {
+            color: #333; /* Dark gray for description */
+            font-size: 0.95rem; 
+        }
+
+        .progress-bar {
+            background: #e0e0e0; /* Lighter background for progress bar */
+            border-radius: 10px;
+            height: 8px;
+            margin: 5px 0; 
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            background: #30D5C8; /* Changed to #30D5C8 */
+            height: 100%;
+            border-radius: 10px;
+            width: 16.67%;
+            transition: width 0.3s ease;
+        }
+
+        .question-container {
+            margin: 8px 0; 
+            background: white; /* White for question card */
+            border-radius: 15px;
+            padding: 20px; /* Maintained for content visibility */
+            border: 1px solid #ddd;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.05);
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+
+        .question-number {
+            color: #555;
+            font-size: 0.8rem; 
+            font-weight: 600;
+            margin-bottom: 8px; 
+        }
+
+        .question {
+            font-size: 1.4rem; 
+            color: #764ba2; /* Purple - maintained */
+            margin-bottom: 15px; 
+            font-weight: 500;
+        }
+
+        .options {
+            display: flex;
+            gap: 8px; 
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        .option-button {
+            background: #f0f0f0;
+            border: 1px solid #ddd;
+            border-radius: 15px;
+            padding: 12px 18px; 
+            font-size: 0.95rem; 
+            color: #333;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            min-width: 110px; 
+            flex: 1 1 auto;
+            max-width: 49%; 
+            outline: none; /* Removed outline - maintained */
+        }
+
+        .option-button:focus {
+            outline: none; /* Ensure outline is removed on focus - maintained */
+        }
+
+        .option-button:hover {
+            background: #e9e9e9;
+            color: #333;
+            border-color: #764ba2;
+            transform: translateY(-2px) scale(1.02);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+
+        .option-button.selected {
+            background: #764ba2;
+            color: white;
+            border-color: #764ba2;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.2);
+        }
+
+        .navigation {
+            margin-top: 15px; 
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            width: 100%;
+            background-color: transparent;
+        }
+
+        .nav-button {
+            background: #30D5C8; /* Changed to #30D5C8 */
+            color: white;
+            border: none;
+            border-radius: 10px;
+            padding: 8px 18px; 
+            font-size: 0.85rem; 
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+        }
+
+        .nav-button:hover {
+            background: #28b8a8; /* Darker shade of #30D5C8 on hover */
+            transform: translateY(-1px) scale(1.01);
+            box-shadow: 0 6px 12px rgba(0,0,0,0.2);
+        }
+
+        .nav-button:disabled {
+            background: #ccc;
+            color: #666;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
+        /* Specific style for the "View My Answers" button */
+        .nav-button.secondary {
+            background: #e0e0e0; /* Grey background */
+            color: #333; /* Dark grey text */
+        }
+
+        .nav-button.secondary:hover {
+            background: #ccc; /* Slightly darker grey on hover */
+        }
+
+        .question-counter {
+            color: #555;
+            font-size: 0.8rem; 
+        }
+
+        .made-with-text {
+            color: #555;
+            font-size: 0.8rem;
+            text-align: center;
+            flex-grow: 1; /* Allows it to take up available space */
+        }
+
+        .recommendations-container {
+            display: flex;
+            flex-direction: column;
+            gap: 6px; 
+            margin: 8px 0; 
+            max-height: 250px; 
+            overflow-y: auto;
+            padding-right: 5px; 
+            padding-left: 5px; /* ADDED: Equal padding on the left */
+            padding-top: 8px; 
+            padding-bottom: 8px; 
+        }
+
+        .model-card {
+            background: #f8f8f8;
+            border: 1px solid #eee;
+            border-radius: 15px;
+            padding: 10px; 
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-align: left;
+            color: #333;
+            box-shadow: 0 3px 10px rgba(0,0,0,0.05);
+        }
+
+        .model-card:hover {
+            background: #e0e0e0;
+            border-color: #764ba2;
+            transform: translateY(-2px) scale(1.01);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+
+        .model-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 4px; 
+        }
+
+        .model-header h3 {
+            margin: 0;
+            color: #764ba2;
+            font-size: 1.1rem; 
+        }
+
+        .confidence-badge {
+            background: #30D5C8; /* Changed to #30D5C8 */
+            color: white;
+            padding: 3px 8px; 
+            border-radius: 20px;
+            font-size: 0.7rem; 
+            font-weight: 600;
+        }
+
+        .model-description {
+            color: #555;
+            margin: 4px 0 6px 0; 
+            line-height: 1.2; 
+        }
+
+        .model-tags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 3px; 
+        }
+
+        .tag {
+            background: #764ba2; /* Kept original purple */
+            color: white;
+            padding: 2px 6px; 
+            border-radius: 12px;
+            font-size: 0.65rem; 
+            font-weight: 500;
+        }
+
+        /* Model Detail Specific Styles */
+        .model-detail-container {
+            text-align: left;
+            padding: 12px; 
+            background: white;
+            border-radius: 15px;
+            border: 1px solid #ddd;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.05);
+            max-height: 400px; 
+            overflow-y: auto;
+            padding-right: 8px; 
+        }
+
+        .model-detail-container h2 {
+            color: #764ba2;
+            font-size: 1.5rem; 
+            margin-bottom: 10px; 
+            text-align: center;
+        }
+
+        .model-detail-container h3 {
+            color: #764ba2;
+            font-size: 1rem; 
+            margin-top: 8px; 
+            margin-bottom: 3px; 
+        }
+
+        .model-detail-container p, .model-detail-container ul {
+            color: #333;
+            line-height: 1.4; 
+            margin-bottom: 4px; 
+        }
+
+        .model-detail-container ul {
+            list-style: disc;
+            padding-left: 15px; 
+        }
+
+        .model-detail-container ul li {
+            margin-bottom: 2px; 
+        }
+
+        /* Custom scrollbar for model detail (adjusted for light background) */
+        .model-detail-container::-webkit-scrollbar {
+            width: 8px;
+        }
+        .model-detail-container::-webkit-scrollbar-track {
+            background: #f0f0f0;
+            border-radius: 10px;
+        }
+        .model-detail-container::-webkit-scrollbar-thumb {
+            background: #a0a0a0;
+            border-radius: 10px;
+        }
+        .model-detail-container::-webkit-scrollbar-thumb:hover {
+            background: #777;
+        }
+
+
+        @media (max-width: 1150px) {
+            .container {
+                max-width: 950px; 
+                width: 95%; /* Adjust width to ensure sufficient side margins on smaller wide screens */
+                padding: 15px;
+                min-height: 480px; 
+            }
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                max-width: 95%; /* Ensure it's responsive down to smaller tablets */
+                width: 95%;
+                padding: 10px;
+            }
+            .header h1 {
+                font-size: 1.5rem; 
+            }
+            .question {
+                font-size: 1.05rem; 
+            }
+            .options {
+                flex-direction: column;
+                gap: 5px;
+            }
+            .option-button {
+                max-width: 100%;
+                padding: 8px 12px;
+                font-size: 0.9rem;
+            }
+            .model-card {
+                padding: 8px;
+            }
+            .recommendations-container {
+                padding-left: 5px; /* Ensure padding is consistent on smaller screens */
+                padding-right: 5px;
+            }
+        }
+
+        @media (max-width: 600px) {
+            .container {
+                max-width: 98%; /* Even tighter on very small screens, let min padding handle the rest */
+                width: 98%;
+                padding: 5px;
+            }
+            .header h1 {
+                font-size: 1.1rem;
+            }
+            .header p {
+                font-size: 0.7rem;
+            }
+            .question {
+                font-size: 0.9rem;
+                margin-bottom: 8px;
+            }
+            .nav-button {
+                padding: 6px 8px;
+                font-size: 0.65rem;
+            }
+            .recommendations-container {
+                padding-right: 2px;
+                padding-left: 2px; /* Reduce padding slightly for very small screens */
+            }
+            .model-card {
+                padding: 6px;
+            }
+             .model-detail-container h2 {
+                font-size: 1.2rem;
+            }
+            .model-detail-container h3 {
+                font-size: 0.9rem;
+            }
+            .model-detail-container p, .model-detail-container ul {
+                font-size: 0.85rem;
+            }
+        }
+    </style>
+<link rel="icon" href="favicon.ico" type="image/x-icon">
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🤖 ML Model Recommender</h1>
+            <p>Interactive tool for selecting the best machine learning model based on your data and requirements</p>
+        </div>
+
+        <div class="progress-bar">
+            <div class="progress-fill" id="progress"></div>
+        </div>
+
+        <div class="question-container">
+            </div>
+
+        <div class="navigation">
+            <button class="nav-button" id="prevButton" onclick="previousQuestion()" disabled>Previous</button>
+            <div class="made-with-text">Made with ❤️ by Razif</div>
+            <button class="nav-button" id="nextButton" onclick="nextQuestion()" disabled>Next</button>
+        </div>
+    </div>
+
+    <script>
+        // App state
+        let currentQuestionIndex = 0;
+        let answers = {};
+        let selectedOption = null;
+
+        // Questions data
+        const questions = [
+            {
+                id: "isLabeled",
+                text: "Is your data labeled?",
+                options: [
+                    { value: "supervised", text: "Yes (Supervised)" },
+                    { value: "unsupervised", text: "No (Unsupervised)" }
+                ],
+                dependsOn: null
+            },
+            {
+                id: "mainTask",
+                text: "What's your main task?",
+                options: [
+                    { value: "classification", text: "Classification" },
+                    { value: "regression", text: "Regression" },
+                    { value: "clustering", text: "Clustering" },
+                    { value: "dimensionality_reduction", text: "Dimensionality Reduction" },
+                    { value: "anomaly_detection", text: "Anomaly Detection" },
+                    { value: "generative_modeling", text: "Generative Modeling" }
+                ],
+                dependsOn: (ans) => ans.isLabeled === 'supervised' || ans.isLabeled === 'unsupervised'
+            },
+            {
+                id: "datasetSize",
+                text: "What's your dataset size?",
+                options: [
+                    { value: "small", text: "Small (< 1K rows)" },
+                    { value: "medium", text: "Medium (1K - 10K)" },
+                    { value: "large", text: "Large (10K - 100K)" },
+                    { value: "very_large", text: "Very Large (> 100K)" }
+                ],
+                dependsOn: null
+            },
+            {
+                id: "dataImbalance",
+                text: "Is your data imbalanced?",
+                options: [
+                    { value: "balanced", text: "No, it's balanced" },
+                    { value: "slightly_imbalanced", text: "Slightly imbalanced" },
+                    { value: "highly_imbalanced", text: "Yes, highly imbalanced" }
+                ],
+                dependsOn: (ans) => ans.mainTask === 'classification'
+            },
+            {
+                id: "interpretability",
+                text: "Do you need model interpretability?",
+                options: [
+                    { value: "high", text: "High (must understand decisions)" },
+                    { value: "medium", text: "Medium (some insight needed)" },
+                    { value: "low", text: "Low (black box is fine)" }
+                ],
+                dependsOn: null
+            },
+            {
+                id: "priority",
+                text: "What's your priority?",
+                options: [
+                    { value: "accuracy", text: "Best Accuracy" },
+                    { value: "speed", text: "Fast Training/Prediction" },
+                    { value: "memory", text: "Low Memory Usage" },
+                    { value: "simplicity", text: "Simple Implementation" }
+                ],
+                dependsOn: null
+            }
+        ];
+
+        // Model data (expanded for Phase 4)
+        const modelsData = {
+            // Classification Models
+            'decision_tree': {
+                id: 'decision_tree',
+                name: 'Decision Tree',
+                task: 'classification',
+                overview: 'Highly interpretable tree-based model perfect for understanding decision paths. It makes decisions by splitting data based on features.',
+                pros: ['Easy to understand and interpret (visualizable)', 'Requires little data preparation (no feature scaling needed)', 'Can handle both numerical and categorical data'],
+                cons: ['Prone to overfitting (especially deep trees)', 'Can be unstable (small changes in data can lead to large changes in tree structure)', 'Bias towards dominant classes'],
+                tips: ['Pruning (max_depth, min_samples_leaf) to prevent overfitting.', 'Consider Ensemble methods (Random Forest, Gradient Boosting) for better performance.', 'Handle imbalanced data (class_weight).'],
+                libraries: ['scikit-learn'],
+                confidence: 95,
+                shortDesc: 'Highly interpretable tree-based model perfect for understanding decision paths.',
+                tags: ['Interpretable', 'Fast Training', 'No Scaling Needed']
+            },
+            'logistic_regression': {
+                id: 'logistic_regression',
+                name: 'Logistic Regression',
+                task: 'classification',
+                overview: 'A linear model used for binary classification. Despite its name, it is a classification algorithm. It estimates the probability of an instance belonging to a particular class.',
+                pros: ['Simple and efficient', 'Good for linearly separable data', 'Outputs probabilities', 'Interpretable'],
+                cons: ['Assumes linearity', 'Can be sensitive to outliers', 'Not suitable for complex relationships'],
+                tips: ['Feature Scaling (Standardization/Normalization) is often beneficial.', 'Handle categorical features (One-Hot Encoding).', 'Regularization (L1/L2) can prevent overfitting.', 'Good baseline model.'],
+                libraries: ['scikit-learn'],
+                confidence: 90,
+                shortDesc: 'Linear model with clear feature importance and probability outputs.',
+                tags: ['Linear', 'Probabilistic', 'Feature Importance']
+            },
+            'random_forest': {
+                id: 'random_forest',
+                name: 'Random Forest',
+                task: 'classification',
+                overview: 'An ensemble learning method for classification, regression, and other tasks that operates by constructing a multitude of decision trees at training time and outputting the class that is the mode of the classes (classification) or mean prediction (regression) of the individual trees.',
+                pros: ['Reduces overfitting compared to single decision trees', 'High accuracy', 'Can handle large number of features', 'Less sensitive to outliers'],
+                cons: ['Less interpretable than single decision trees', 'Can be computationally intensive for very large datasets'],
+                tips: ['Tune n_estimators (number of trees) and max_features (features per split).', 'Feature importance can be extracted.', 'Good for mixed data types.', 'Often performs well out-of-the-box.'],
+                libraries: ['scikit-learn'],
+                confidence: 95,
+                shortDesc: 'Ensemble method that combines multiple trees for robust predictions.',
+                tags: ['Ensemble', 'Robust', 'Feature Selection']
+            },
+            'xgboost': {
+                id: 'xgboost',
+                name: 'XGBoost',
+                task: 'classification',
+                overview: 'Powerful ensemble techniques that build models sequentially, where each new model corrects the errors made by previous ones. XGBoost and LightGBM are highly optimized implementations.',
+                pros: ['State-of-the-art accuracy on many tabular datasets', 'Handles complex non-linear relationships', 'Robust to outliers'],
+                cons: ['Can be prone to overfitting if not tuned carefully', 'Computationally intensive and slower to train than Random Forest', 'Less interpretable'],
+                tips: ['Tune learning_rate, n_estimators, max_depth, subsample, colsample_bytree.', 'Feature scaling is generally not required but can sometimes help convergence.', 'Early stopping can prevent overfitting.', 'Excellent for structured data.'],
+                libraries: ['xgboost', 'lightgbm', 'catboost'],
+                confidence: 90,
+                shortDesc: 'Gradient boosting framework optimized for speed and performance.',
+                tags: ['High Accuracy', 'Competition Winner', 'Handles Missing Data']
+            },
+            'svm': {
+                id: 'svm',
+                name: 'Support Vector Machine',
+                task: 'classification',
+                overview: 'A powerful and versatile model that can perform linear or non-linear classification, regression, and even outlier detection. It works by finding the hyperplane that best separates the classes in the feature space.',
+                pros: ['Effective in high dimensional spaces', 'Memory efficient (uses a subset of training points)', 'Versatile with different kernels (linear, polynomial, RBF)'],
+                cons: ['Can be slow on large datasets', 'Less interpretable than linear models', 'Sensitive to feature scaling'],
+                tips: ['Feature Scaling is crucial.', 'Choose the right kernel (RBF is common).', 'Tune hyperparameters C (regularization) and gamma (kernel coefficient).', 'Consider One-vs-Rest for multi-class classification.'],
+                libraries: ['scikit-learn'],
+                confidence: 85,
+                shortDesc: 'Powerful classifier that works well with large datasets and complex patterns.',
+                tags: ['Kernel Trick', 'High Dimensional', 'Margin-based']
+            },
+            'balanced_rf': {
+                id: 'balanced_rf',
+                name: 'Balanced Random Forest',
+                task: 'classification',
+                overview: 'Random Forest specifically designed to handle imbalanced datasets by undersampling the majority class or oversampling the minority class.',
+                pros: ['Specifically addresses data imbalance', 'Maintains benefits of Random Forest (robust, accurate)', 'Reduces bias towards majority class'],
+                cons: ['Can lose information if undersampling is too aggressive', 'May still be computationally intensive for very large datasets'],
+                tips: ['Often used with techniques like SMOTE for oversampling.', 'Evaluate performance using metrics like F1-score, Precision, Recall, AUC-ROC on imbalanced data.', 'Experiment with different sampling strategies.'],
+                libraries: ['imbalanced-learn', 'scikit-learn'],
+                confidence: 88,
+                shortDesc: 'Random Forest specifically designed to handle imbalanced datasets.',
+                tags: ['Imbalanced Data', 'Ensemble', 'Balanced Sampling']
+            },
+            // Regression Models
+            'linear_regression': {
+                id: 'linear_regression',
+                name: 'Linear Regression',
+                task: 'regression',
+                overview: 'A linear approach to modeling the relationship between a scalar response (or dependent variable) and one or more explanatory variables (or independent variables).',
+                pros: ['Simple to understand and implement', 'Fast to train', 'Highly interpretable'],
+                cons: ['Assumes linear relationship', 'Sensitive to outliers', 'Cannot capture non-linear patterns'],
+                tips: ['Check for linearity assumptions (scatter plots).', 'Handle outliers.', 'Feature Scaling can help with convergence for gradient descent-based solvers.', 'Polynomial features can capture some non-linearity.'],
+                libraries: ['scikit-learn'],
+                confidence: 95,
+                shortDesc: 'Simple linear relationship model with clear coefficient interpretation.',
+                tags: ['Linear', 'Simple', 'Coefficient Analysis']
+            },
+            'ridge_regression': {
+                id: 'ridge_regression',
+                name: 'Ridge Regression',
+                task: 'regression',
+                overview: 'Extensions of linear regression that add regularization penalties to prevent overfitting. Ridge (L2 penalty) shrinks coefficients, Lasso (L1 penalty) can shrink some coefficients to zero, performing feature selection.',
+                pros: ['Reduces overfitting', 'Lasso performs automatic feature selection', 'More robust than plain Linear Regression'],
+                cons: ['Still assumes linear relationship (unless combined with polynomial features)', 'Lasso can be unstable with highly correlated features'],
+                tips: ['Feature Scaling is important.', 'Tune the regularization strength (alpha/lambda).', 'Cross-validation for optimal alpha.', 'Useful when you have many features or multicollinearity.'],
+                libraries: ['scikit-learn'],
+                confidence: 85,
+                shortDesc: 'Regularized linear regression that prevents overfitting.',
+                tags: ['Regularized', 'Prevents Overfitting', 'L2 Penalty']
+            },
+            'random_forest_reg': {
+                id: 'random_forest_reg',
+                name: 'Random Forest Regressor',
+                task: 'regression',
+                overview: 'An ensemble learning method for regression that operates by constructing a multitude of decision trees at training time and outputting the mean prediction of the individual trees.',
+                pros: ['Reduces overfitting compared to single decision trees', 'High accuracy', 'Can handle large number of features', 'Less sensitive to outliers'],
+                cons: ['Less interpretable than single decision trees', 'Can be computationally intensive for very large datasets'],
+                tips: ['Tune n_estimators (number of trees) and max_features (features per split).', 'Feature importance can be extracted.', 'Good for mixed data types.', 'Often performs well out-of-the-box.'],
+                libraries: ['scikit-learn'],
+                confidence: 90,
+                shortDesc: 'Tree ensemble method for robust non-linear regression.',
+                tags: ['Non-linear', 'Ensemble', 'Feature Importance']
+            },
+            'xgboost_reg': {
+                id: 'xgboost_reg',
+                name: 'XGBoost Regressor',
+                task: 'regression',
+                overview: 'Powerful gradient boosting framework optimized for speed and performance on regression tasks. It builds models sequentially, correcting errors of previous models.',
+                pros: ['State-of-the-art accuracy on many tabular datasets', 'Handles complex non-linear relationships', 'Robust to outliers'],
+                cons: ['Can be prone to overfitting if not tuned carefully', 'Computationally intensive and slower to train than Random Forest', 'Less interpretable'],
+                tips: ['Tune learning_rate, n_estimators, max_depth, subsample, colsample_bytree.', 'Feature scaling is generally not required but can sometimes help convergence.', 'Early stopping can prevent overfitting.', 'Excellent for structured data.'],
+                libraries: ['xgboost', 'lightgbm', 'catboost'],
+                confidence: 88,
+                shortDesc: 'Gradient boosting for high-performance regression tasks.',
+                tags: ['High Performance', 'Gradient Boosting', 'Competition Grade']
+            },
+            // Clustering Models
+            'kmeans': {
+                id: 'kmeans',
+                name: 'K-Means Clustering',
+                task: 'clustering',
+                overview: 'An unsupervised learning algorithm that partitions n observations into k clusters, where each observation belongs to the cluster with the nearest mean (centroid), serving as a prototype of the cluster.',
+                pros: ['Simple to understand and implement', 'Computationally efficient for large datasets', 'Scalable'],
+                cons: ['Requires pre-defining the number of clusters (k)', 'Sensitive to initial centroid placement', 'Struggles with non-globular clusters or varying densities', 'Sensitive to outliers'],
+                tips: ['Feature Scaling is important.', 'Use the Elbow Method or Silhouette Score to find optimal k.', 'Run multiple initializations (n_init).', 'Consider PCA for high-dimensional data before clustering.'],
+                libraries: ['scikit-learn'],
+                confidence: 90,
+                shortDesc: 'Fast and simple clustering algorithm for spherical clusters.',
+                tags: ['Fast', 'Spherical Clusters', 'Centroid-based']
+            },
+            'dbscan': {
+                id: 'dbscan',
+                name: 'DBSCAN',
+                task: 'clustering',
+                overview: 'Density-Based Spatial Clustering of Applications with Noise. It groups together points that are closely packed together, marking as outliers points that lie alone in low-density regions.',
+                pros: ['Does not require specifying number of clusters beforehand', 'Can find arbitrarily shaped clusters', 'Robust to outliers'],
+                cons: ['Struggles with varying densities in data', 'Sensitive to parameter tuning (eps, min_samples)', 'Not suitable for very high-dimensional data'],
+                tips: ['Feature Scaling is important.', 'Tune eps (maximum distance between samples) and min_samples (number of samples in a neighborhood).', 'Use for data with clear density variations.'],
+                libraries: ['scikit-learn'],
+                confidence: 85,
+                shortDesc: 'Density-based clustering that can find arbitrary shaped clusters.',
+                tags: ['Arbitrary Shapes', 'Noise Detection', 'No K Required']
+            },
+            'hierarchical': {
+                id: 'hierarchical',
+                name: 'Hierarchical Clustering',
+                task: 'clustering',
+                overview: 'An algorithm that builds a hierarchy of clusters. It can be agglomerative (bottom-up, starting with individual points) or divisive (top-down, starting with one large cluster).',
+                pros: ['Does not require specifying number of clusters beforehand', 'Provides a dendrogram (tree-like diagram) for visualization', 'Can reveal nested cluster structures'],
+                cons: ['Computationally intensive for large datasets (O(n^3) or O(n^2))', 'Once a merge/split is done, it cannot be undone', 'Sensitive to noise and outliers'],
+                tips: ['Feature Scaling is important.', 'Choose appropriate linkage criteria (ward, complete, average).', 'Use the dendrogram to determine the number of clusters.', 'Can be slow for large N.'],
+                libraries: ['scikit-learn', 'scipy.cluster.hierarchy'],
+                confidence: 75,
+                shortDesc: 'Creates tree of clusters, good for understanding cluster relationships.',
+                tags: ['Dendrogram', 'No K Required', 'Hierarchical Structure']
+            },
+            // Dimensionality Reduction Models
+            'pca': {
+                id: 'pca',
+                name: 'Principal Component Analysis',
+                task: 'dimensionality_reduction',
+                overview: 'A linear dimensionality reduction technique that transforms data into a new coordinate system where the greatest variance by any projection comes to lie on the first coordinate (called the first principal component), the second greatest variance on the second coordinate, and so on.',
+                pros: ['Reduces dimensionality while retaining most variance', 'Speeds up training of subsequent models', 'Can help visualize high-dimensional data'],
+                cons: ['Components are less interpretable than original features', 'Assumes linearity', 'Sensitive to feature scaling'],
+                tips: ['Feature Scaling is crucial before applying PCA.', 'Determine the number of components by explained variance ratio.', 'Useful for noise reduction.', 'Often used as a preprocessing step.'],
+                libraries: ['scikit-learn'],
+                confidence: 95,
+                shortDesc: 'Linear dimensionality reduction preserving maximum variance.',
+                tags: ['Linear', 'Variance Preservation', 'Fast']
+            },
+            'tsne': {
+                id: 'tsne',
+                name: 't-SNE',
+                task: 'dimensionality_reduction',
+                overview: 'A non-linear dimensionality reduction technique well-suited for embedding high-dimensional data into a low-dimensional space (e.g., 2D or 3D) for visualization, while preserving the local structure of the data.',
+                pros: ['Excellent for visualizing high-dimensional data in 2D/3D', 'Captures non-linear relationships'],
+                cons: ['Computationally expensive for large datasets', 'Parameters (perplexity, learning rate) can be tricky to tune', 'Not suitable for transforming new data (only for visualization of existing data)'],
+                tips: ['Feature Scaling is important.', 'Often best applied after PCA to reduce initial dimensionality.', 'Experiment with perplexity and learning rate.', 'Primarily for visualization, not for feature engineering for other models.'],
+                libraries: ['scikit-learn'],
+                confidence: 80,
+                shortDesc: 'Non-linear reduction great for visualization of high-dimensional data.',
+                tags: ['Visualization', 'Non-linear', 'Local Structure']
+            },
+            // Anomaly Detection Models
+            'isolation_forest': {
+                id: 'isolation_forest',
+                name: 'Isolation Forest',
+                task: 'anomaly_detection',
+                overview: 'An ensemble tree-based anomaly detection algorithm. It isolates anomalies by randomly selecting a feature and then randomly selecting a split value between the maximum and minimum values of the selected feature. This partitioning process is repeated recursively.',
+                pros: ['Effective for high-dimensional data', 'Scales well to large datasets', 'Does not require a distance metric'],
+                cons: ['Less effective if anomalies are not sparse', 'Can be sensitive to parameter tuning (n_estimators, contamination)'],
+                tips: ['Feature Scaling is generally not required.', 'Tune `contamination` parameter based on expected anomaly ratio.', 'Works by isolating outliers rather than profiling normal points.'],
+                libraries: ['scikit-learn'],
+                confidence: 90,
+                shortDesc: 'Effective for high-dimensional anomaly detection.',
+                tags: ['Anomaly Detection', 'Ensemble', 'Scalable']
+            },
+            'one_class_svm': {
+                id: 'one_class_svm',
+                name: 'One-Class SVM',
+                task: 'anomaly_detection',
+                overview: 'An extension of Support Vector Machines used for novelty or outlier detection. It learns a decision boundary that encompasses the "normal" data points, marking anything outside this boundary as an anomaly.',
+                pros: ['Effective for complex, non-linear boundaries', 'Works well in high-dimensional spaces'],
+                cons: ['Sensitive to outliers in the training data', 'Computationally intensive for large datasets', 'Sensitive to parameter tuning (nu, gamma)'],
+                tips: ['Feature Scaling is crucial.', 'Tune `nu` (upper bound on the fraction of training errors and lower bound of the fraction of support vectors) and `gamma` (kernel coefficient).', 'Assumes anomalies are rare and distinct from normal data.'],
+                libraries: ['scikit-learn'],
+                confidence: 85,
+                shortDesc: 'Novelty detection using SVM principles.',
+                tags: ['Anomaly Detection', 'Kernel Trick', 'Novelty Detection']
+            },
+            // Generative Models (brief mention as they are complex topics)
+            'gans': {
+                id: 'gans',
+                name: 'Generative Adversarial Networks (GANs)',
+                task: 'generative_modeling',
+                overview: 'A class of artificial intelligence algorithms used in unsupervised learning, implemented by a system of two neural networks competing against each other in a zero-sum game framework.',
+                pros: ['Can generate highly realistic data (images, audio, text)', 'Learns complex data distributions'],
+                cons: ['Difficult to train (mode collapse, vanishing gradients)', 'Requires significant computational resources', 'Less stable than other models'],
+                tips: ['Requires deep learning expertise.', 'Careful hyperparameter tuning.', 'Often used for image synthesis, style transfer, data augmentation.'],
+                libraries: ['TensorFlow', 'PyTorch'],
+                confidence: 80,
+                shortDesc: 'Generates realistic new data samples.',
+                tags: ['Deep Learning', 'Generative', 'Complex']
+            },
+            'vaes': {
+                id: 'vaes',
+                name: 'Variational Autoencoders (VAEs)',
+                task: 'generative_modeling',
+                overview: 'A type of generative model that learns a compressed representation (latent space) of the input data and can then generate new data by sampling from this latent space.',
+                pros: ['More stable to train than GANs', 'Provides a probabilistic framework for generation', 'Useful for anomaly detection and data compression'],
+                cons: ['Generated samples can be blurrier than GANs', 'Requires deep learning expertise', 'Computationally intensive'],
+                tips: ['Requires deep learning expertise.', 'Tune latent space dimension and network architecture.', 'Useful for data generation and representation learning.'],
+                libraries: ['TensorFlow', 'PyTorch'],
+                confidence: 78,
+                shortDesc: 'Learns data distribution for generation and representation.',
+                tags: ['Deep Learning', 'Generative', 'Probabilistic']
+            }
+        };
+
+
+        // Filters questions that should be currently visible based on dependencies
+        function getVisibleQuestions() {
+            return questions.filter(q => !q.dependsOn || q.dependsOn(answers));
+        }
+        
+        // Function to handle option selection and auto-advance
+        function selectOption(value) {
+            // Remove previous selection visual from all buttons
+            document.querySelectorAll('.option-button').forEach(btn => {
+                btn.classList.remove('selected');
+            });
+            
+            // Add selection to clicked button
+            event.target.classList.add('selected');
+            
+            // Store the answer
+            const currentQ = getVisibleQuestions()[currentQuestionIndex];
+            answers[currentQ.id] = value;
+            
+            // Log for debugging
+            console.log('Selected:', value);
+            console.log('All answers:', answers);
+            
+            // Auto-advance to the next question
+            setTimeout(() => {
+                nextQuestion();
+            }, 300); // Small delay for visual feedback
+        }
+
+        function nextQuestion() {
+            const visibleQ = getVisibleQuestions();
+            const currentQ = visibleQ[currentQuestionIndex];
+
+            // If the current question is not answered, do not proceed
+            if (!answers[currentQ.id]) {
+                document.getElementById('nextButton').disabled = true;
+                return;
+            }
+
+            // Check if changing this answer makes subsequent questions invalid
+            // and clear their answers if they become hidden.
+            const originalCurrentQuestionIndex = currentQuestionIndex;
+            let newAnswers = { ...answers };
+            let shouldResetSubsequent = false;
+
+            for (let i = originalCurrentQuestionIndex + 1; i < questions.length; i++) {
+                const q = questions[i];
+                if (q.dependsOn && !q.dependsOn(newAnswers)) {
+                    if (newAnswers[q.id]) {
+                        delete newAnswers[q.id];
+                        shouldResetSubsequent = true;
+                    }
+                }
+            }
+            answers = newAnswers; // Update global answers object
+
+            const nextIndex = currentQuestionIndex + 1;
+            if (nextIndex < visibleQ.length) {
+                currentQuestionIndex = nextIndex;
+                loadQuestion();
+            } else {
+                showResults();
+            }
+        }
+
+        function previousQuestion() {
+            if (currentQuestionIndex > 0) {
+                currentQuestionIndex--;
+                loadQuestion();
+            }
+        }
+
+        // Helper function to render the basic questionnaire structure
+        function renderQuestionnaireStructure() {
+            const questionContainer = document.querySelector('.question-container');
+            // Check if elements already exist to avoid re-creating them unnecessarily
+            if (!document.getElementById('questionNumber')) {
+                questionContainer.innerHTML = `
+                    <div class="question-number" id="questionNumber"></div>
+                    <div class="question" id="questionText"></div>
+                    <div class="options" id="optionsContainer"></div>
+                `;
+            }
+            document.querySelector('.navigation').style.display = 'flex'; // Ensure navigation is visible
+        }
+
+        function loadQuestion() {
+            renderQuestionnaireStructure(); // Ensure the structure is present
+
+            const visibleQ = getVisibleQuestions();
+            const totalVisibleQuestions = visibleQ.length;
+
+            // If currentQuestionIndex goes out of bounds due to dependency changes,
+            // adjust it to the last valid visible question or 0.
+            if (currentQuestionIndex >= totalVisibleQuestions && totalVisibleQuestions > 0) {
+                currentQuestionIndex = totalVisibleQuestions - 1;
+            } else if (totalVisibleQuestions === 0 && questions.length > 0) {
+                currentQuestionIndex = 0;
+            } else if (totalVisibleQuestions === 0 && questions.length === 0) {
+                document.getElementById('questionText').textContent = "No questions available.";
+                document.getElementById('optionsContainer').innerHTML = '';
+                // ... disable buttons and set counters to 0 ...
+                return;
+            }
+
+
+            // Update progress bar
+            const progress = ((currentQuestionIndex + 1) / totalVisibleQuestions) * 100;
+            document.getElementById('progress').style.width = progress + '%';
+            
+            // Update question number and counter
+            document.getElementById('questionNumber').textContent = `Question ${currentQuestionIndex + 1} of ${totalVisibleQuestions}`;
+            // The question counter div is removed from the navigation bar, so these lines are no longer needed
+            // document.getElementById('currentQ').textContent = currentQuestionIndex + 1;
+            // document.getElementById('totalQ').textContent = totalVisibleQuestions;
+            
+            // Load current question
+            const question = visibleQ[currentQuestionIndex];
+            document.getElementById('questionText').textContent = question.text;
+            
+            // Load options
+            const optionsContainer = document.getElementById('optionsContainer');
+            optionsContainer.innerHTML = '';
+            
+            question.options.forEach(option => {
+                const button = document.createElement('button');
+                button.className = 'option-button';
+                button.textContent = option.text;
+                button.onclick = () => selectOption(option.value);
+                
+                // Restore previous selection if exists
+                if (answers[question.id] === option.value) { // Use question.id here
+                    button.classList.add('selected');
+                    selectedOption = option.value;
+                }
+                
+                optionsContainer.appendChild(button);
+            });
+            
+            // Update navigation buttons
+            document.getElementById('prevButton').disabled = currentQuestionIndex === 0;
+            // Next button is disabled if current question not answered, or if it's the last question and not answered
+            document.getElementById('nextButton').disabled = !answers[question.id] || (currentQuestionIndex === totalVisibleQuestions - 1 && !answers[question.id]);
+            
+            // Reset selected option for new question if it hasn't been answered yet
+            if (!answers[question.id]) {
+                selectedOption = null;
+            } else {
+                selectedOption = answers[question.id];
+            }
+        }
+
+        function selectModel(modelId) {
+            const model = modelsData[modelId];
+            if (!model) return;
+            
+            showModelDetails(modelId);
+        }
+
+        function getRecommendations() {
+            const isLabeled = answers.isLabeled;
+            const mainTask = answers.mainTask;
+            const datasetSize = answers.datasetSize;
+            const dataImbalance = answers.dataImbalance;
+            const interpretability = answers.interpretability;
+            const priority = answers.priority;
+            
+            let recommendations = [];
+            
+            // Filter models based on initial criteria
+            for (const modelId in modelsData) {
+                const model = modelsData[modelId];
+                let includeModel = true;
+
+                // Supervised vs Unsupervised
+                if (isLabeled === 'supervised' && !['classification', 'regression'].includes(model.task)) {
+                    includeModel = false;
+                } else if (isLabeled === 'unsupervised' && !['clustering', 'dimensionality_reduction', 'anomaly_detection', 'generative_modeling'].includes(model.task)) {
+                    includeModel = false;
+                }
+
+                // Main Task
+                if (includeModel && mainTask && model.task !== mainTask) {
+                    includeModel = false;
+                }
+
+                // Data Imbalance (only for classification)
+                if (includeModel && mainTask === 'classification' && dataImbalance === 'highly_imbalanced' && model.id !== 'balanced_rf') {
+                    // If highly imbalanced, specifically recommend balanced_rf, or allow others with a note
+                    // For now, let's prioritize balanced_rf strongly if imbalanced.
+                    // If other models are included, their tips should mention handling imbalance.
+                }
+
+                // Dataset Size (general guidelines)
+                if (includeModel) {
+                    if (datasetSize === 'small' && ['xgboost', 'gans', 'vaes'].includes(model.id)) {
+                        includeModel = false; // These often need more data
+                    }
+                    if (datasetSize === 'very_large' && ['svm', 'dbscan', 'hierarchical', 'tsne', 'one_class_svm'].includes(model.id)) {
+                        // These can be slow on very large datasets, but not necessarily excluded.
+                        // For simplicity, let's exclude for now if strictly "very_large" is chosen
+                        // and they are known to be slow.
+                        // In a real app, this would be a "consider performance" flag.
+                        if (['svm', 'dbscan', 'hierarchical', 'tsne', 'one_class_svm'].includes(model.id)) {
+                            includeModel = false;
+                        }
+                    }
+                }
+
+                // Interpretability
+                if (includeModel && interpretability === 'high' && ['xgboost', 'random_forest', 'svm', 'gans', 'vaes', 'tsne'].includes(model.id)) {
+                    // These are generally less interpretable. If high interpretability is critical,
+                    // we might exclude them or give them lower confidence.
+                    // For now, if high interpretability is a must, let's filter them out for simplicity.
+                    includeModel = false;
+                }
+
+                if (includeModel) {
+                    recommendations.push({ ...model }); // Push a copy to avoid modifying original modelsData
+                }
+            }
+            
+            // Adjust confidence based on priority and dataset size
+            recommendations.forEach(rec => {
+                if (priority === 'speed' && rec.tags.includes('Fast')) rec.confidence += 5;
+                if (priority === 'accuracy' && rec.tags.includes('High Accuracy')) rec.confidence += 5;
+                if (priority === 'simplicity' && rec.tags.includes('Simple')) rec.confidence += 5;
+                if (datasetSize === 'small' && rec.tags.includes('Fast Training')) rec.confidence += 3;
+            });
+            
+            // Sort by confidence and return top 4
+            return recommendations
+                .sort((a, b) => b.confidence - a.confidence)
+                .slice(0, 4);
+        }
+
+        function showResults() {
+            const recommendations = getRecommendations();
+            
+            document.querySelector('.question-container').innerHTML = `
+                <div style="text-align: center; padding: 10px;">
+                    <h2 style="color: #764ba2; margin-bottom: 10px;">🎯 Your ML Model Recommendations</h2>
+                    <p style="color: #555; font-size: 0.9rem; margin-bottom: 15px;">Based on your requirements, here are the best models for your project:</p>
+                    
+                    <div class="recommendations-container">
+                        ${recommendations.length > 0 ? recommendations.map((model) => `
+                            <div class="model-card" onclick="selectModel('${model.id}')">
+                                <div class="model-header">
+                                    <h3>${model.name}</h3>
+                                    <div class="confidence-badge">${model.confidence}% match</div>
+                                </div>
+                                <p class="model-description">${model.shortDesc}</p>
+                                <div class="model-tags">
+                                    ${model.tags.map(tag => `<span class="tag">${tag}</span>`).join('')}
+                                </div>
+                            </div>
+                        `).join('') : `
+                            <p style="color: #555; font-size: 0.95rem;">No specific recommendations found. Try adjusting your answers.</p>
+                        `}
+                    </div>
+                    
+                    <div style="margin-top: 15px;">
+                        <button class="nav-button" onclick="restart()">Start Over</button>
+                        <button class="nav-button secondary" onclick="showAnswers()">View My Answers</button>
+                    </div>
+                </div>
+            `;
+            
+            // Hide navigation buttons as they are not relevant on the results page
+            document.querySelector('.navigation').style.display = 'none';
+        }
+        
+        // New function for Phase 4: Show detailed model information
+        function showModelDetails(modelId) {
+            const model = modelsData[modelId];
+            if (!model) {
+                document.querySelector('.question-container').innerHTML = `<p style="color: #333;">Model details not found.</p>`;
+                return;
+            }
+
+            document.querySelector('.question-container').innerHTML = `
+                <div class="model-detail-container">
+                    <h2 style="color: #764ba2; text-shadow: none;">${model.name}</h2>
+                    
+                    <h3>Overview</h3>
+                    <p>${model.overview}</p>
+
+                    <h3>Pros</h3>
+                    <ul>
+                        ${model.pros.map(pro => `<li>${pro}</li>`).join('')}
+                    </ul>
+
+                    <h3>Cons</h3>
+                    <ul>
+                        ${model.cons.map(con => `<li>${con}</li>`).join('')}
+                    </ul>
+
+                    <h3>Tips for Building/Tuning</h3>
+                    <ul>
+                        ${model.tips.map(tip => `<li>${tip}</li>`).join('')}
+                    </ul>
+
+                    <h3>Common Libraries</h3>
+                    <p>${model.libraries.join(', ')}</p>
+
+                    <div style="margin-top: 15px; text-align: center;">
+                        <button class="nav-button" onclick="showResults()">← Back to Recommendations</button>
+                    </div>
+                </div>
+            `;
+            // Hide navigation buttons
+            document.querySelector('.navigation').style.display = 'none';
+        }
+
+        function selectModel(modelId) {
+            showModelDetails(modelId);
+        }
+        
+        function showAnswers() {
+            document.querySelector('.question-container').innerHTML = `
+                <div style="text-align: center; padding: 10px;">
+                    <h2 style="color: #764ba2; margin-bottom: 15px;">📋 Your Answers</h2>
+                    <div style="margin-top: 15px; padding: 15px; background: #f8f8f8; border-radius: 15px; text-align: left; border: 1px solid #eee; box-shadow: 0 3px 10px rgba(0,0,0,0.05);">
+                        <div style="margin-bottom: 6px; color: #333;">📊 <strong>Data Type:</strong> ${answers.isLabeled === 'supervised' ? 'Supervised Learning' : 'Unsupervised Learning'}</div>
+                        <div style="margin-bottom: 6px; color: #333;">🎯 <strong>Task:</strong> ${getTaskName(answers.mainTask)}</div>
+                        <div style="margin-bottom: 6px; color: #333;">📈 <strong>Dataset Size:</strong> ${getDatasetSizeName(answers.datasetSize)}</div>
+                        ${answers.mainTask === 'classification' ? `<div style="margin-bottom: 6px; color: #333;">⚖️ <strong>Data Balance:</strong> ${getBalanceName(answers.dataImbalance)}</div>` : ''}
+                        <div style="margin-bottom: 6px; color: #333;">🔍 <strong>Interpretability:</strong> ${getInterpretabilityName(answers.interpretability)}</div>
+                        <div style="margin-bottom: 6px; color: #333;">🚀 <strong>Priority:</strong> ${getPriorityName(answers.priority)}</div>
+                    </div>
+                    <div style="margin-top: 10px;">
+                        <button class="nav-button" onclick="showResults()">Back to Results</button>
+                        <button class="nav-button secondary" onclick="restart()">Start Over</button>
+                    </div>
+                </div>
+            `;
+        }
+
+        function getTaskName(value) {
+            const taskNames = {
+                'classification': 'Classification',
+                'regression': 'Regression', 
+                'clustering': 'Clustering',
+                'dimensionality_reduction': 'Dimensionality Reduction',
+                'anomaly_detection': 'Anomaly Detection',
+                'generative_modeling': 'Generative Modeling'
+            };
+            return taskNames[value] || value;
+        }
+        
+        function getDatasetSizeName(value) {
+            const sizeNames = {
+                'small': 'Small (< 1K rows)',
+                'medium': 'Medium (1K - 10K)',
+                'large': 'Large (10K - 100K)',
+                'very_large': 'Very Large (> 100K)'
+            };
+            return sizeNames[value] || value;
+        }
+        
+        function getBalanceName(value) {
+            const balanceNames = {
+                'balanced': 'Balanced',
+                'slightly_imbalanced': 'Slightly Imbalanced', 
+                'highly_imbalanced': 'Highly Imbalanced'
+            };
+            return balanceNames[value] || value;
+        }
+        
+        function getInterpretabilityName(value) {
+            const interpNames = {
+                'high': 'High - Must understand decisions',
+                'medium': 'Medium - Some insight needed',
+                'low': 'Low - Black box is fine'
+            };
+            return interpNames[value] || value;
+        }
+        
+        function getPriorityName(value) {
+            const priorityNames = {
+                'accuracy': 'Best Accuracy',
+                'speed': 'Fast Training/Prediction',
+                'memory': 'Low Memory Usage',
+                'simplicity': 'Simple Implementation'
+            };
+            return priorityNames[value] || value;
+        }
+
+        function restart() {
+            currentQuestionIndex = 0;
+            answers = {};
+            selectedOption = null;
+            document.querySelector('.navigation').style.display = 'flex';
+            loadQuestion();
+        }
+
+        // Initialize the app
+        loadQuestion();
+    </script>
+</body>
+</html>
